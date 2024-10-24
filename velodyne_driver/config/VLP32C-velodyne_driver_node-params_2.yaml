@@ -1,6 +1,6 @@
 velodyne_driver_node:
     ros__parameters:
-        device_ip: 192.168.3.201
+        device_ip: 192.168.3.202
         gps_time: false
         time_offset: 0.0
         enabled: true
@@ -10,5 +10,5 @@ velodyne_driver_node:
         frame_id: velodyne
         model: 32C
         rpm: 600.0
-        port: 2368
+        port: 2369
         timestamp_first_packet: false
