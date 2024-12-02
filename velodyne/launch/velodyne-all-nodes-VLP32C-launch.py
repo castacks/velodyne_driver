@@ -34,44 +34,108 @@
 import os
 import yaml
 
-import ament_index_python.packages
+from ament_index_python.packages import get_package_share_directory
 import launch
-import launch_ros.actions
+from launch.actions import DeclareLaunchArgument
+from launch.substitutions import LaunchConfiguration
+from launch_ros.actions import Node
 
+VELO_1_NS = 'velodyne_1'
+VELO_2_NS = 'velodyne_2'
+
+def get_share_file(package_name, file_name):
+    return os.path.join(get_package_share_directory(package_name), file_name)
 
 def generate_launch_description():
-    driver_share_dir = ament_index_python.packages.get_package_share_directory('velodyne_driver')
-    driver_params_file = os.path.join(driver_share_dir, 'config', 'VLP32C-velodyne_driver_node-params.yaml')
-    velodyne_driver_node = launch_ros.actions.Node(package='velodyne_driver',
-                                                   executable='velodyne_driver_node',
-                                                   output='both',
-                                                   parameters=[driver_params_file])
 
-    convert_share_dir = ament_index_python.packages.get_package_share_directory('velodyne_pointcloud')
-    convert_params_file = os.path.join(convert_share_dir, 'config', 'VLP32C-velodyne_transform_node-params.yaml')
+    # Velodyne 1
+    driver_params_file = get_share_file(
+        'velodyne_driver', 'config/VLP32C-velodyne_driver_node-params_1.yaml')
+    
+    driver_params_path_1 = DeclareLaunchArgument(
+        "velodyne_1_params", default_value=driver_params_file, description='velo1 params')
+    velodyne_driver_node_1 = Node(
+        package='velodyne_driver',
+        executable='velodyne_driver_node',
+        namespace=VELO_1_NS,
+        output='both',
+        parameters=[LaunchConfiguration("velodyne_1_params")]
+    )
+
+    convert_params_file = get_share_file(
+        'velodyne_pointcloud', 'config/VLP32C-velodyne_transform_node-params.yaml')
     with open(convert_params_file, 'r') as f:
         convert_params = yaml.safe_load(f)['velodyne_transform_node']['ros__parameters']
-    convert_params['calibration'] = os.path.join(convert_share_dir, 'params', 'VeloView-VLP-32C.yaml')
-    velodyne_transform_node = launch_ros.actions.Node(package='velodyne_pointcloud',
-                                                      executable='velodyne_transform_node',
-                                                      output='both',
-                                                      parameters=[convert_params])
+    convert_params['calibration'] = get_share_file(
+        'velodyne_pointcloud', 'params/VeloView-VLP-32C.yaml')
+    velodyne_transform_node_1 = Node(
+        package='velodyne_pointcloud',
+        executable='velodyne_transform_node',
+        namespace=VELO_1_NS,
+        output='both',
+        parameters=[convert_params]
+    )
 
-    laserscan_share_dir = ament_index_python.packages.get_package_share_directory('velodyne_laserscan')
-    laserscan_params_file = os.path.join(laserscan_share_dir, 'config', 'default-velodyne_laserscan_node-params.yaml')
-    velodyne_laserscan_node = launch_ros.actions.Node(package='velodyne_laserscan',
-                                                      executable='velodyne_laserscan_node',
-                                                      output='both',
-                                                      parameters=[laserscan_params_file])
+    laserscan_params_file = get_share_file(
+        'velodyne_laserscan', 'config/default-velodyne_laserscan_node-params.yaml')
+    velodyne_laserscan_node_1 = Node(
+        package='velodyne_laserscan',
+        executable='velodyne_laserscan_node',
+        namespace=VELO_1_NS,
+        output='both',
+        parameters=[laserscan_params_file]
+    )
 
+    # Velodyne 2
+    driver_params_file = get_share_file(
+        'velodyne_driver', 'config/VLP32C-velodyne_driver_node-params_2.yaml')
 
-    return launch.LaunchDescription([velodyne_driver_node,
-                                     velodyne_transform_node,
-                                     velodyne_laserscan_node,
+    driver_params_path_2 = DeclareLaunchArgument(
+        "velodyne_2_params", default_value=driver_params_file, description='velo2 params')
+
+    velodyne_driver_node_2 = Node(
+        package='velodyne_driver',
+        executable='velodyne_driver_node',
+        namespace=VELO_2_NS,
+        output='both',
+        parameters=[LaunchConfiguration("velodyne_2_params")]
+    )
+
+    velodyne_transform_node_2 = Node(
+        package='velodyne_pointcloud',
+        executable='velodyne_transform_node',
+        namespace=VELO_2_NS,
+        output='both',
+        parameters=[convert_params]
+    )
+
+    velodyne_laserscan_node_2 = Node(
+        package='velodyne_laserscan',
+        executable='velodyne_laserscan_node',
+        namespace=VELO_2_NS,
+        output='both',
+        parameters=[laserscan_params_file]
+    )
+
+    return launch.LaunchDescription([
+                                     driver_params_path_1,
+                                     velodyne_driver_node_1,
+                                     velodyne_transform_node_1,
+                                     velodyne_laserscan_node_1,
+                                     driver_params_path_2,
+                                     velodyne_driver_node_2,
+                                     velodyne_transform_node_2,
+                                     velodyne_laserscan_node_2,
 
                                      launch.actions.RegisterEventHandler(
                                          event_handler=launch.event_handlers.OnProcessExit(
-                                             target_action=velodyne_driver_node,
+                                             target_action=velodyne_driver_node_1,
+                                             on_exit=[launch.actions.EmitEvent(
+                                                 event=launch.events.Shutdown())],
+                                         )),
+                                     launch.actions.RegisterEventHandler(
+                                         event_handler=launch.event_handlers.OnProcessExit(
+                                             target_action=velodyne_driver_node_2,
                                              on_exit=[launch.actions.EmitEvent(
                                                  event=launch.events.Shutdown())],
                                          )),
