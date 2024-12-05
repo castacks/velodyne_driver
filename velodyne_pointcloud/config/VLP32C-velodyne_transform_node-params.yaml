@@ -7,4 +7,4 @@ velodyne_transform_node:
         view_direction: 0.0
         fixed_frame: ""
         target_frame: ""
-        organize_cloud: true
+        organize_cloud: false
