@@ -47,8 +47,17 @@ def generate_launch_description():
         package='tf2_ros',
         executable='static_transform_publisher',
         output='both',
-        arguments=["0", "0", "0", "0", "0", "0", "vehicle", "multisense/head"]
+        # arguments=["0", "0", "0", "0", "0", "0", "vehicle", "multisense/head"]
+        arguments=["-0.09492452", "0.06414485", "-0.135983", "-0.01191501", "0.11306512", "0.000305", "0.99351609", "vehicle", "multisense/head"]
     )
+
+    #need to add this to work on old hbag for now/mux out old static tf
+    # temp_hack = Node(
+    #     package='tf2_ros',
+    #     executable='static_transform_publisher',
+    #     output='both',
+    #     arguments=["0.005", "0.105", "0.000", "-0.5", "0.5", "-0.5", "0.5", "multisense/head", "multisense/left_camera_optical_frame"]
+    # )
 
     vehicle_to_velodyne_1 = Node(
         package='tf2_ros',
@@ -73,6 +82,7 @@ def generate_launch_description():
 
     return launch.LaunchDescription([
         vehicle_to_multisense,
+        # temp_hack,
         vehicle_to_velodyne_1,
         vehicle_to_velodyne_2,
         vehicle_to_novatel,
